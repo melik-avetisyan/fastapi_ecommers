@@ -100,8 +100,8 @@ class BadRequest(HTTPException):
 
     """обертка для ошибок запроса"""
 
-    def __init__(sefl, detail):
-        super.__init__(
+    def __init__(self, detail):
+        super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Bad request. {detail}"
+            detail=detail
         )

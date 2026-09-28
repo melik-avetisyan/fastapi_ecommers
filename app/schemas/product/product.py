@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from decimal import Decimal
+from datetime import datetime
 
 
 class ProductCreate(BaseModel):
@@ -40,6 +41,9 @@ class Product(ProductCreate):
                           description="product current rating")
     is_active: bool = Field(...,
                             description="active status")
+    created_at: datetime = Field(...)
+
+    updated_at: datetime | None = Field(default=None)
 
     model_config = ConfigDict(from_attributes=True)
 

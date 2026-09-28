@@ -5,29 +5,60 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
 from app.schemas import (ProductCreate, ProductUpdate, Review as ReviewSchema,
-                         Product as ProductSchema)
+                         Product as ProductSchema, ProductPage
+                         )
 from app.models import (Product as ProductModel, Category as CategoryModel,
                         User as UserModel, Review as ReviewModel)
 
 from app.database.depends import (get_async_session, get_data_service,
                                   DataService)
 from app.auth.depends import validate_user_role
-from app.utilities.enums import UserRole, DataBaseTables
-from app.exceptions.exceptions import NotFound
+from app.utilities.enums import (UserRole, DataBaseTables, SortingParams,
+                                 ProductFilterParams)
+from app.exceptions.exceptions import NotFound, BadRequest
+from app.service import parse_pagination_params
 
 
 router = APIRouter(prefix="/products", tags=["products"])
 
 
-@router.get("", response_model=list[ProductSchema],
+@router.get("", response_model=ProductPage,
             status_code=status.HTTP_200_OK)
-async def read_products(session: AsyncSession = Depends(get_async_session)):
+async def read_products(data_service:
+                        Annotated[DataService, Depends(get_data_service)],
+                        params:
+                        Annotated[parse_pagination_params, Depends()],
+                        ):
 
-    stmt = select(ProductModel).where(ProductModel.is_active.is_(True))
-    result = await session.scalars(stmt)
-    products_list = result.all()
+    page_params = params.page_params.model_dump()
+    sort_params = params.sort_params.model_dump()
+    filter_params = params.filter_params.model_dump(exclude_none=True)
 
-    return products_list
+    if (sort_params.get(SortingParams.IS_RANK) is True and
+       filter_params.get(ProductFilterParams.SEARCH, None) is None):
+
+        raise BadRequest("Ranking attribute is true without search string")
+
+    total_number = await data_service.total_in_table(
+        table=DataBaseTables.PRODUCT,
+        filter_params=filter_params
+    )
+
+    items = await data_service.table_pagination(
+        table=DataBaseTables.PRODUCT,
+        page_params=page_params,
+        filter_params=filter_params,
+        sort_params=sort_params
+    )
+
+    result = {
+        "items": items,
+        "total_number": total_number,
+        "page": page_params["page"],
+        "limit": page_params["limit"]
+    }
+
+    return result
 
 
 @router.get("/{product_id}/", response_model=ProductSchema,
@@ -107,9 +138,8 @@ async def read_reviews_in_product(product_id: int,
 
     reviews = await data_service.get_many_by_and_conditions(
         table=DataBaseTables.REVIEW,
-        product_id=product_id,
-        is_active=True
-    )
+        product_id=product_id
+        )
 
     return reviews
 

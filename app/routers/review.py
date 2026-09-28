@@ -21,8 +21,7 @@ async def read_reviews(data_service:
     схеме ReviewSchema"""
 
     review_list = await data_service.get_many_by_and_conditions(
-        table=DataBaseTables.REVIEW,
-        is_active=True
+        table=DataBaseTables.REVIEW
     )
 
     return review_list

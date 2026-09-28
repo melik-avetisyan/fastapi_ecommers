@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import Depends
 
-from .session import async_session_fabric
+from .engine import async_session_fabric
 from .service import DataService
 
 
